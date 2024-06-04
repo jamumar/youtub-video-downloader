@@ -4,11 +4,9 @@ from flask_socketio import SocketIO, emit
 import yt_dlp
 import threading
 import re
-import eventlet
-eventlet.monkey_patch()
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 def strip_ansi_escape_sequences(text):
     ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
@@ -46,18 +44,15 @@ def index():
 def video_info():
     url = request.json['url']
     ydl_opts = {'quiet': True}
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            thumbnail = info.get('thumbnail')
-            title = info.get('title')
-            formats = [
-                {'format_id': f['format_id'], 'format_note': f['format_note'] or f['height'], 'ext': f['ext']}
-                for f in info['formats'] if f.get('vcodec') != 'none' and f.get('acodec') != 'none'
-            ]
-            return jsonify({'thumbnail': thumbnail, 'title': title, 'formats': formats})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 400
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        thumbnail = info.get('thumbnail')
+        title = info.get('title')
+        formats = [
+            {'format_id': f['format_id'], 'format_note': f['format_note'] or f['height'], 'ext': f['ext']}
+            for f in info['formats'] if f.get('vcodec') != 'none' and f.get('acodec') != 'none'
+        ]
+        return jsonify({'thumbnail': thumbnail, 'title': title, 'formats': formats})
 
 @socketio.on('download')
 def handle_download(data):
