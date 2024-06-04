@@ -1,6 +1,6 @@
 Flask
 Flask-SocketIO
-eventlet
+eventlet==0.36.1
 yt-dlp
 gunicorn==21.2.0
 
