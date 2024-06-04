@@ -1,3 +1,4 @@
+import os
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import yt_dlp
@@ -5,7 +6,7 @@ import threading
 import re
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 def strip_ansi_escape_sequences(text):
     ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
@@ -61,4 +62,5 @@ def handle_download(data):
     thread.start()
 
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    port = int(os.environ.get('PORT', 5000))
+    socketio.run(app, host='0.0.0.0', port=port)
