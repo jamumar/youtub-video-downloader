@@ -1,11 +1,10 @@
 import os
-import re
-import threading
 from flask import Flask, render_template, request, jsonify
 from flask_socketio import SocketIO, emit
 import yt_dlp
+import threading
+import re
 import eventlet
-
 eventlet.monkey_patch()
 
 app = Flask(__name__)
@@ -23,7 +22,7 @@ def download_video(url, resolution, output_path='.', socketio=None):
                 percent = float(percent_str.strip().replace('%', ''))
                 socketio.emit('progress', {'percent': percent})
             except ValueError:
-                app.logger.error(f"Failed to parse percent: {percent_str}")
+                print(f"Failed to parse percent: {percent_str}")
         elif d['status'] == 'finished':
             socketio.emit('progress', {'percent': 100})
             socketio.emit('status', {'message': 'Download completed!'})
@@ -38,7 +37,6 @@ def download_video(url, resolution, output_path='.', socketio=None):
             ydl.download([url])
     except yt_dlp.utils.DownloadError as e:
         socketio.emit('error', {'message': str(e)})
-        app.logger.error(f"Download error: {e}")
 
 @app.route('/')
 def index():
