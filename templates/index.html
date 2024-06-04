@@ -55,8 +55,8 @@
             animation: spin 2s linear infinite;
         }
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% { transform: rotate(0deg) }
+            100% { transform: rotate(360deg) }
         }
     </style>
 </head>
@@ -98,8 +98,6 @@
                 event.preventDefault();
                 var url = $('#url').val();
 
-                console.log('Fetching video info for URL:', url);
-
                 $.ajax({
                     type: 'POST',
                     url: '/video_info',
@@ -115,12 +113,6 @@
                         $('#error-message').hide();
                     },
                     success: function(response) {
-                        if (response.error) {
-                            $('#error-message').text(response.error).show();
-                            return;
-                        }
-
-                        console.log('Video info received:', response);
                         $('#thumbnail').attr('src', response.thumbnail);
                         $('#video-title').text(response.title);
                         $('#resolution-options').empty();
@@ -132,8 +124,7 @@
                         $('#loader').hide();
                         $('#thumbnail').show();
                     },
-                    error: function(xhr, status, error) {
-                        console.error('Error fetching video information:', error);
+                    error: function() {
                         $('#error-message').text('Error fetching video information').show();
                     }
                 });
