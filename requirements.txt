@@ -1,5 +1,5 @@
 Flask
-Flask-SocketIO
+Flask-SocketIO==5.3.6
 eventlet==0.36.1
 yt-dlp
 gunicorn==21.2.0
