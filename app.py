@@ -4,6 +4,8 @@ from flask_socketio import SocketIO, emit
 import yt_dlp
 import threading
 import re
+import eventlet
+eventlet.monkey_patch()
 
 app = Flask(__name__)
 socketio = SocketIO(app, cors_allowed_origins="*")
