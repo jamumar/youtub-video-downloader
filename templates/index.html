@@ -113,6 +113,10 @@
                         $('#error-message').hide();
                     },
                     success: function(response) {
+                        if (response.error) {
+                            $('#error-message').text(response.error).show();
+                            return;
+                        }
                         $('#thumbnail').attr('src', response.thumbnail);
                         $('#video-title').text(response.title);
                         $('#resolution-options').empty();
