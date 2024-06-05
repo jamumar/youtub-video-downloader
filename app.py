@@ -1,18 +1,24 @@
 import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, send_from_directory
 from flask_socketio import SocketIO, emit
 import yt_dlp
 import threading
 import re
 
 app = Flask(__name__)
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 def strip_ansi_escape_sequences(text):
     ansi_escape = re.compile(r'\x1b\[[0-9;]*m')
     return ansi_escape.sub('', text)
 
-def download_video(url, resolution, output_path='.', socketio=None):
+def get_downloads_folder():
+    if os.name == 'nt':  # For Windows
+        return os.path.join(os.environ['USERPROFILE'], 'Downloads')
+    else:  # For macOS and Linux
+        return os.path.join(os.path.expanduser('~'), 'Downloads')
+
+def download_video(url, resolution, socketio=None):
     def progress_hook(d):
         if d['status'] == 'downloading':
             percent_str = strip_ansi_escape_sequences(d['_percent_str'])
@@ -24,10 +30,13 @@ def download_video(url, resolution, output_path='.', socketio=None):
         elif d['status'] == 'finished':
             socketio.emit('progress', {'percent': 100})
             socketio.emit('status', {'message': 'Download completed!'})
+            filename = d['info_dict']['_filename']
+            socketio.emit('download_link', {'link': f'/download/{os.path.basename(filename)}'})
 
+    download_dir = get_downloads_folder()
     ydl_opts = {
         'format': str(resolution),
-        'outtmpl': f'{output_path}/%(title)s.%(ext)s',
+        'outtmpl': f'{download_dir}/%(title)s.%(ext)s',
         'progress_hooks': [progress_hook],
     }
     try:
@@ -44,24 +53,26 @@ def index():
 def video_info():
     url = request.json['url']
     ydl_opts = {'quiet': True}
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=False)
-            thumbnail = info.get('thumbnail')
-            title = info.get('title')
-            formats = [
-                {'format_id': f['format_id'], 'format_note': f['format_note'] or f['height'], 'ext': f['ext']}
-                for f in info['formats'] if f.get('vcodec') != 'none' and f.get('acodec') != 'none'
-            ]
-            return jsonify({'thumbnail': thumbnail, 'title': title, 'formats': formats})
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        thumbnail = info.get('thumbnail')
+        title = info.get('title')
+        formats = [
+            {'format_id': f['format_id'], 'format_note': f['format_note'] or f['height'], 'ext': f['ext']}
+            for f in info['formats'] if f.get('vcodec') != 'none' and f.get('acodec') != 'none'
+        ]
+        return jsonify({'thumbnail': thumbnail, 'title': title, 'formats': formats})
+
+@app.route('/download/<filename>', methods=['GET'])
+def download_file(filename):
+    download_dir = get_downloads_folder()
+    return send_from_directory(download_dir, filename, as_attachment=True)
 
 @socketio.on('download')
 def handle_download(data):
     video_url = data['url']
     resolution = data['resolution']
-    thread = threading.Thread(target=download_video, args=(video_url, resolution, '.', socketio))
+    thread = threading.Thread(target=download_video, args=(video_url, resolution, socketio))
     thread.start()
 
 if __name__ == "__main__":
