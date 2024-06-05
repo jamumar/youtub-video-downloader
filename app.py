@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 
 app = Flask(__name__)
+app.config['SECRET_KEY'] = 'secret!'
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 def strip_ansi_escape_sequences(text):
