@@ -44,15 +44,18 @@ def index():
 def video_info():
     url = request.json['url']
     ydl_opts = {'quiet': True}
-    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-        info = ydl.extract_info(url, download=False)
-        thumbnail = info.get('thumbnail')
-        title = info.get('title')
-        formats = [
-            {'format_id': f['format_id'], 'format_note': f['format_note'] or f['height'], 'ext': f['ext']}
-            for f in info['formats'] if f.get('vcodec') != 'none' and f.get('acodec') != 'none'
-        ]
-        return jsonify({'thumbnail': thumbnail, 'title': title, 'formats': formats})
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            thumbnail = info.get('thumbnail')
+            title = info.get('title')
+            formats = [
+                {'format_id': f['format_id'], 'format_note': f['format_note'] or f['height'], 'ext': f['ext']}
+                for f in info['formats'] if f.get('vcodec') != 'none' and f.get('acodec') != 'none'
+            ]
+            return jsonify({'thumbnail': thumbnail, 'title': title, 'formats': formats})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @socketio.on('download')
 def handle_download(data):
